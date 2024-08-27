@@ -12,9 +12,14 @@ const showUpdateDialog = ref(false);
 const locales: Ref<{ label: string, value: string }[]> = ref([]);
 (async () => {
   for (const locale in await getI18nMessages()) {
-    const langFile = (await import('../assets/i18n/' + locale + '.json')).default
+    const langFile = (await import('../assets/i18n/' + locale + '.json'))
+        .default;
     locales.value.push({
-      label: langFile['language.name'] + ' (' + langFile['language.country'] + ')',
+      label:
+          langFile['language.name'] +
+          ' (' +
+          langFile['language.country'] +
+          ')',
       value: locale,
     });
   }
@@ -38,8 +43,15 @@ async function checkUpdate() {
       });
     }
   } else {
+    console.log(res.message);
     ElMessage({
-      message: '检查更新失败：' + res.message,
+      message: i18n.t('update.get.failed', {
+        reason:
+            typeof res.message === 'object' &&
+            (<{ name: string }>res.message).name == 'AxiosError'
+                ? (<{ message: string }>res.message).message // 服务器无法请求到更新
+                : i18n.t('request.failed.reason.' + res.message), // 其他原因
+      }),
       type: 'error',
     });
   }
@@ -54,14 +66,13 @@ async function update() {
     },
   });
   if (res.status == 'async') {
-    ElMessage({
-      message: '正在更新，请稍后',
-      type: 'success',
-    });
+    i18n.t('update.updating' + res.message);
   } else {
     ElMessage({
-      message: '更新失败：' + res.message,
-      type: 'error',
+      message: i18n.t('update.failed', {
+        reason: i18n.t('request.failed.reason.' + res.message),
+      }),
+      type: 'success',
     });
   }
 }
@@ -77,20 +88,20 @@ async function update() {
     <ElDialog
         v-if="updateInfo"
         v-model="showUpdateDialog"
-        :title="'MCSL Future Web 更新 - ' + updateInfo.version">
+        :title="$t('update.dialog.title', { version: updateInfo.version })">
       <sup
-      >更新发布时间：{{
-          new Date(updateInfo.publish_date).toLocaleString()
+      >{{
+          $t('update.dialog.date', {date: new Date(updateInfo.publish_date).toLocaleString()})
         }}</sup
       >
       <p>{{ updateInfo.notes }}</p>
-      <ElCheckbox v-model="stop" label="更新完成后关闭MCSL Future Web"/>
+      <ElCheckbox v-model="stop" :label="$t('update.dialog.stop-server')"/>
       <ElFormItem>
-        <ElButton @click="showUpdateDialog = false"> 取消</ElButton>
+        <ElButton @click="showUpdateDialog = false">{{ $t('update.dialog.close') }}</ElButton>
         <ElButton @click="openUrl(updateInfo.version_info)">
-          详细信息
+          {{ $t('update.dialog.info') }}
         </ElButton>
-        <ElButton type="primary" @click="update"> 下载更新</ElButton>
+        <ElButton type="primary" @click="update">{{ $t('update.dialog.update') }}</ElButton>
       </ElFormItem>
     </ElDialog>
     <ElForm>
@@ -163,8 +174,11 @@ async function update() {
             label="语言"
             @change="useLocale().setLocale(locale)">
           <ElOption label="系统默认" value="auto"/>
-          <ElOption v-for="(item, index) in locales" :key="index" :label="item.label"
-                    :value="item.value"/>
+          <ElOption
+              v-for="(item, index) in locales"
+              :key="index"
+              :label="item.label"
+              :value="item.value"/>
         </ElSelect>
       </ElFormItem>
       <ElFormItem label="更新">
