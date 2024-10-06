@@ -5,16 +5,10 @@ export default defineEventHandler(async (event) => {
 	const url = body.url;
 	const daemonToken = body.daemonToken;
 	try {
-		if (!name || !url || !daemonToken)
-			throw '守护进程名称、URL或Token不能为空';
-		await verifyToken(token);
-		if (
-			!(await hasPermission(
-				await getUsernameByToken(token),
-				'mcsl.web.daemon.add',
-			))
-		)
-			throw '没有权限';
+		await requireEula();
+		requireParam(name, url, daemonToken);
+		await isAuthed(token);
+		await matchTokenPermission(token, 'mcsl.web.daemon.add');
 		await addDaemon(name, url, daemonToken);
 	} catch (e) {
 		return {

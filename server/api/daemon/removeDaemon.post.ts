@@ -1,18 +1,12 @@
-import {hasPermission} from '~/server/utils/auth';
-
 export default defineEventHandler(async (event) => {
 	const body = await readBody(event);
 	const token = body.token;
 	const name = body.name;
 	try {
-		await verifyToken(token);
-		if (
-			!(await hasPermission(
-				await getUsernameByToken(token),
-				'mcsl.web.daemon.remove',
-			))
-		)
-			throw '没有权限';
+		await requireEula();
+		requireParam(name);
+		await isAuthed(token);
+		await matchTokenPermission(token, 'mcsl.web.daemon.remove');
 		await removeDaemon(name);
 	} catch (e) {
 		return {

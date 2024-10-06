@@ -2,11 +2,13 @@ export default defineEventHandler(async (event) => {
 	const body = await readBody(event);
 	const token = body.token;
 	try {
+		await requireEula();
+		await isAuthed(token);
 		const daemons = [];
 		for (const daemon in await getDaemons()) {
 			if (
-				await hasPermission(
-					await getUsernameByToken(token),
+				await hasTokenPermission(
+					token,
 					'mcsl.web.daemon.' + daemon + '.access',
 				)
 			)

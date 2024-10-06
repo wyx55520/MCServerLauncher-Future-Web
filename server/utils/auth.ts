@@ -11,7 +11,7 @@ async function getSecret() {
 	return (await getConfig()).auth.secret;
 }
 
-export async function encode(str: string) {
+export async function md5(str: string) {
 	const md5 = crypto.createHash('md5');
 	return md5.update(str + (await getSecret())).digest('hex');
 }
@@ -19,7 +19,7 @@ export async function encode(str: string) {
 /**
  * 获取所有用户
  */
-export async function getUsers() {
+async function getUsers() {
 	const users: { [key: string]: any } | null =
 		await storage.getItem('users.json');
 	if (users == null || typeof users != 'object') {
@@ -61,11 +61,12 @@ export async function addUser(
 	password: string,
 	permissions: string[],
 ) {
-	if (await hasUser(username)) throw '用户已存在';
+	if (await hasUser(username)) throw 'user-exists';
 	const users = await getUsers();
 	users[username] = {
 		permissions: permissions,
-		password: await encode(password),
+		id: crypto.randomUUID(),
+		password: await md5(password),
 	};
 	await storage.setItem('users.json', users);
 }
@@ -91,7 +92,7 @@ async function generateToken(username: string, rememberMe: boolean = false) {
 		: config.auth.expire;
 	return jwt.sign(
 		{
-			username: await encode(username),
+			userid: (await getUser(username)).id,
 		},
 		await getSecret(),
 		{
@@ -109,19 +110,24 @@ export async function getUsernameByToken(token: string) {
 	return new Promise<string>((resolve, reject) => {
 		getSecret()
 			.then((secret) => {
-				jwt.verify(token, secret, async (err, decoded) => {
-					if (decoded && (<JwtPayload>decoded).username)
-						for (const user in await getUsers()) {
-							if (
-								(await encode(user)) ==
-								(<JwtPayload>decoded).username
-							)
-								resolve(user);
-						}
-					reject(err?.message ?? '无效的Token');
-				});
+				jwt.verify(
+					token,
+					secret,
+					async (err: Error | null, decoded: any) => {
+						if (decoded && decoded.userid)
+							for (const user in await getUsers()) {
+								if ((await getUser(user)).id == decoded.userid)
+									resolve(user);
+							}
+						reject(
+							err
+								? err.message.replace(' ', '-')
+								: 'invalid-token',
+						);
+					},
+				);
 			})
-			.catch((e) => reject(e?.message ?? '无效的Token'));
+			.catch((e) => reject(e?.message ?? 'invalid-token'));
 	});
 }
 
@@ -142,7 +148,7 @@ export async function verifyToken(token: string) {
 	try {
 		await getUsernameByToken(token);
 	} catch (e) {
-		throw '未知用户';
+		throw 'unknown-user';
 	}
 	return <JwtPayload>jwt.verify(token, await getSecret());
 }
@@ -162,12 +168,12 @@ export async function login(
 ) {
 	if (
 		(await hasUser(username)) &&
-		(await getUser(username)).password == (await encode(password))
+		(await getUser(username)).password == (await md5(password))
 	) {
-		console.log('用户' + username + '已登录');
+		console.log('User ' + username + ' logged in');
 		return await generateToken(username, rememberMe);
 	}
-	throw '用户名或密码错误';
+	throw 'login-failed';
 }
 
 /**
@@ -190,7 +196,7 @@ export async function hasPermission(username: string, permission: string) {
 		try {
 			if (matchPermission(perm, permission)) return true;
 		} catch (e) {
-			if (e != '用户权限格式错误') throw e;
+			if (e != 'invalid-user-permission') throw e;
 		}
 	}
 	return false;
@@ -203,8 +209,9 @@ export async function hasPermission(username: string, permission: string) {
  */
 function matchPermission(a: string, b: string): boolean {
 	if (!/^(([a-zA-Z-_]+|\*{1,2})\.)*([a-zA-Z-_]+|\*{1,2})$/.test(a))
-		throw '用户权限格式错误';
-	if (!/^(([a-zA-Z-_]+)\.)*([a-zA-Z-_]+)$/.test(b)) throw '匹配权限格式错误';
+		throw 'invalid-user-permission';
+	if (!/^(([a-zA-Z-_]+)\.)*([a-zA-Z-_]+)$/.test(b))
+		throw 'invalid-matching-permission';
 	const pattern =
 		a
 			.replaceAll('.', '\\s')

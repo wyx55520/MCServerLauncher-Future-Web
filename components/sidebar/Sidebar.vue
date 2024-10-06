@@ -22,7 +22,7 @@ const expandedButtonIndex = ref(0); // 当前展开的底部按钮索引
 
 <template>
 	<ElAside
-		v-if="useScreenWidth().isMdOrBigger() || isInDrawer"
+		v-if="useScreenWidth().isMdOrBigger.value || isInDrawer"
 		class="sidebar__aside"
 		:class="{
 			sidebar__collapsed:
@@ -94,19 +94,6 @@ const expandedButtonIndex = ref(0); // 当前展开的底部按钮索引
 						@click="$router.push('/help-center')">
 						<i class="fa fa-question" /><span>{{
 							$t('sidebar.help-center')
-						}}</span>
-					</ElButton>
-
-					<ElButton
-						class="sidebar__menu-item"
-						:class="{
-							'sidebar__menu-item-selected':
-								$router.currentRoute.value.fullPath ===
-								'/users',
-						}"
-						@click="$router.push('/users')">
-						<i class="fa fa-users" /><span>{{
-							$t('sidebar.users')
 						}}</span>
 					</ElButton>
 				</div>

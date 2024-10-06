@@ -3,8 +3,9 @@ export default defineEventHandler(async (event) => {
 	const token = body.token;
 	const permission = body.permission;
 	try {
-		if (!permission) throw '权限名称不能为空';
-		await verifyToken(token);
+		await requireEula();
+		requireParam(permission);
+		await isAuthed(token);
 		return {
 			status: 'ok',
 			data: {

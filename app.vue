@@ -6,9 +6,8 @@ import 'element-plus/theme-chalk/dark/css-vars.css';
 
 useHead({
 	titleTemplate: (titleChunk) => {
-		// 标题格式
 		return titleChunk
-			? `${titleChunk} | MCSL Future Web`
+			? `${titleChunk} | ` + 'MCSL Future Web'
 			: 'MCSL Future Web';
 	},
 	link: [
@@ -23,8 +22,8 @@ useHead({
 	],
 });
 
-// 加载主题
-useDarkMode().loadTheme();
+// 加载
+loadApp();
 </script>
 
 <template>

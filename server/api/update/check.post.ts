@@ -2,14 +2,9 @@ export default defineEventHandler(async (event) => {
 	const body = await readBody(event);
 	const token = body.token;
 	try {
-		await verifyToken(token);
-		if (
-			!(await hasPermission(
-				await getUsernameByToken(token),
-				'mcsl.web.update',
-			))
-		)
-			throw '没有权限';
+		await requireEula();
+		await isAuthed(token);
+		await matchTokenPermission(token, 'mcsl.web.update');
 		return {
 			status: 'ok',
 			message: '',

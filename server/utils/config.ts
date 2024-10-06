@@ -1,15 +1,28 @@
 import {nanoid} from 'nanoid';
 
+export interface Config {
+	auth: {
+		secret: string;
+		rememberMeExpire: string;
+		expire: string;
+	};
+	agreedEula: boolean;
+	beian: string;
+	siteTitle: string;
+}
+
 /**
  * 默认配置文件
  */
-export const defaultConfig = {
+export const defaultConfig: Config = {
 	auth: {
 		secret: nanoid(128), // 私钥
 		rememberMeExpire: '30d', // 记住我的token有效期
 		expire: '1d', // 不记住我的token有效期
 	},
+	agreedEula: false,
 	beian: '',
+	siteTitle: 'MCSL Future Web',
 };
 
 const load = loadConfig();
@@ -21,7 +34,7 @@ export async function saveDefaultConfig() {
 	// 判断是否存在
 	if (!(await storage.hasItem('config.json'))) {
 		await storage.setItem('config.json', defaultConfig);
-		console.warn('配置文件不存在！已创建新配置文件！');
+		console.warn('Config does not exist! Generating new config!');
 	}
 }
 
@@ -35,11 +48,11 @@ export async function loadConfig() {
 	// 校验配置文件格式
 	if (typeof config !== 'object') {
 		config = defaultConfig;
-		console.warn('配置文件格式错误！已重置为默认配置文件！');
+		console.warn('Wrong config format! Using default config!');
 	}
 	// 填充缺失的配置项
 	fillMissingValues(config, defaultConfig);
-	console.log('已加载配置文件');
+	console.log('Config loaded');
 	await saveConfig(config);
 }
 
@@ -50,7 +63,7 @@ export async function loadConfig() {
 export async function saveConfig(config: any) {
 	await saveDefaultConfig();
 	await storage.setItem('config.json', config);
-	console.log('已保存配置文件');
+	console.log('Saved config!');
 }
 
 /**
@@ -69,20 +82,20 @@ function fillMissingValues(
 			// 键缺失
 			config[key] = defaultConfig[key];
 			console.warn(
-				'配置文件缺失键“' +
+				'Missing key "' +
 					(parentKey == null ? '' : parentKey + '.') +
 					key +
-					'”！已重置为：',
+					'" in config! Defaulting to: ',
 				defaultConfig[key],
 			);
 		} else if (typeof config[key] !== typeof defaultConfig[key]) {
 			// 值类型不同
 			config[key] = defaultConfig[key];
 			console.warn(
-				'配置文件中键“' +
+				'Wrong value type for key "' +
 					(parentKey == null ? '' : parentKey + '.') +
 					key +
-					'”的值类型错误！已重置为：',
+					'"! Defaulting to: ',
 				defaultConfig[key],
 			);
 		} else if (typeof defaultConfig[key] == 'object') {
@@ -101,7 +114,7 @@ function fillMissingValues(
  * 获取配置文件
  * @returns 配置文件
  */
-export async function getConfig(): Promise<any> {
+export async function getConfig(): Promise<Config> {
 	await load;
 	return await storage.getItem('config.json');
 }
